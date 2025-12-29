@@ -87,3 +87,90 @@ func TestClient_DocID(t *testing.T) {
 		t.Errorf("expected doc1, got %s", client.DocID())
 	}
 }
+
+func TestClient_Receive_Operation(t *testing.T) {
+	t.Parallel()
+
+	conn := newMockConn()
+	client := ws.NewClient("c1", "user1", conn)
+
+	// Send a message to the incoming channel
+	conn.incoming <- ws.Message{
+		Type: ws.MessageTypeOperation,
+		Payload: ws.OperationPayload{
+			DocID:        "doc1",
+			BaseRevision: 5,
+			OpType:       0,
+			Position:     10,
+			Char:         "a",
+		},
+	}
+
+	msg, err := client.Receive()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if msg.Type != ws.MessageTypeOperation {
+		t.Errorf("expected operation type, got %s", msg.Type)
+	}
+
+	payload, ok := msg.Payload.(ws.OperationPayload)
+	if !ok {
+		t.Fatal("expected OperationPayload")
+	}
+
+	if payload.DocID != "doc1" {
+		t.Errorf("expected docId doc1, got %s", payload.DocID)
+	}
+
+	if payload.Position != 10 {
+		t.Errorf("expected position 10, got %d", payload.Position)
+	}
+}
+
+func TestClient_Receive_Sync(t *testing.T) {
+	t.Parallel()
+
+	conn := newMockConn()
+	client := ws.NewClient("c1", "user1", conn)
+
+	// Simulate sync message with raw JSON
+	conn.incoming <- ws.Message{
+		Type: ws.MessageTypeSync,
+		Payload: map[string]string{
+			"docId": "doc1",
+		},
+	}
+
+	msg, err := client.Receive()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if msg.Type != ws.MessageTypeSync {
+		t.Errorf("expected sync type, got %s", msg.Type)
+	}
+}
+
+func TestClient_Receive_ServerMessage(t *testing.T) {
+	t.Parallel()
+
+	conn := newMockConn()
+	client := ws.NewClient("c1", "user1", conn)
+
+	// Server-to-client messages keep raw payload
+	conn.incoming <- ws.Message{
+		Type:    ws.MessageTypeAck,
+		Payload: ws.AckPayload{Revision: 5},
+	}
+
+	msg, err := client.Receive()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if msg.Type != ws.MessageTypeAck {
+		t.Errorf("expected ack type, got %s", msg.Type)
+	}
+}
