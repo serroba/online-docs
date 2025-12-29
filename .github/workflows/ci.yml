@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+
+      - name: Tidy Go modules
+        run: go mod tidy
+
+      - name: Check for uncommitted go.mod/go.sum changes
+        run: |
+          if ! git diff --quiet go.mod go.sum; then
+            echo "::error::Dependencies are not tidy. Run 'go mod tidy' and commit changes."
+            git diff
+            exit 1
+          fi
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+      - name: Run tests
+        run: go test -v -race ./...
