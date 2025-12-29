@@ -64,7 +64,9 @@ func (s *Server) handleCreateDocument(w http.ResponseWriter, r *http.Request) {
 	// Grant the creator Owner role if ACL store is configured
 	userID := UserIDFromContext(r.Context())
 	if s.permStore != nil && userID != "" {
-		_ = s.permStore.Grant(req.ID, userID, acl.Owner)
+		if err := s.permStore.Grant(req.ID, userID, acl.Owner); err != nil {
+			log.Printf("failed to grant owner role for document %q to user %q: %v", req.ID, userID, err)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

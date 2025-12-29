@@ -41,6 +41,9 @@ func main() {
 		Addr:              addr,
 		Handler:           server.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	log.Printf("Starting server on %s", addr)
