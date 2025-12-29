@@ -329,6 +329,10 @@ func (e *errorStore) LatestRevision(_ string) (int, error) {
 	return 0, nil
 }
 
+func (e *errorStore) DeleteDocument(_ string) error {
+	return nil
+}
+
 // mockApplyOp simulates applying an operation to content.
 func mockApplyOp(content string, op storage.Operation) (string, error) {
 	runes := []rune(content)

@@ -52,4 +52,8 @@ type Store interface {
 	// LatestRevision returns the highest revision number for a document.
 	// Returns ErrDocumentNotFound if the document doesn't exist.
 	LatestRevision(docID string) (int, error)
+
+	// DeleteDocument removes a document and all its data.
+	// Returns ErrDocumentNotFound if the document doesn't exist.
+	DeleteDocument(docID string) error
 }
