@@ -63,6 +63,26 @@ func TestTransform_DeleteVsDelete_DifferentPositions(t *testing.T) {
 	}
 }
 
+func TestTransform_DeleteVsDelete_Op1AfterOp2(t *testing.T) {
+	t.Parallel()
+
+	// Delete at position 5, Delete at position 2
+	// op1 is AFTER op2, so op1 shifts left
+	op1 := ot.NewDelete(5, "alice")
+	op2 := ot.NewDelete(2, "bob")
+
+	op1Prime, op2Prime := ot.Transform(op1, op2)
+
+	// op2 deletes before op1, so op1 shifts left
+	if op1Prime.Position != 4 {
+		t.Errorf("op1 position should shift to 4, got %d", op1Prime.Position)
+	}
+
+	if op2Prime.Position != 2 {
+		t.Errorf("op2 position should stay at 2, got %d", op2Prime.Position)
+	}
+}
+
 func TestTransform_DeleteVsDelete_SamePosition(t *testing.T) {
 	t.Parallel()
 
