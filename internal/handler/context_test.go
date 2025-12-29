@@ -1,10 +1,10 @@
-package api_test
+package handler_test
 
 import (
 	"context"
 	"testing"
 
-	"github.com/serroba/online-docs/internal/api"
+	"github.com/serroba/online-docs/internal/handler"
 )
 
 func TestUserIDFromContext(t *testing.T) {
@@ -14,7 +14,7 @@ func TestUserIDFromContext(t *testing.T) {
 		t.Parallel()
 
 		ctx := context.Background()
-		userID := api.UserIDFromContext(ctx)
+		userID := handler.UserIDFromContext(ctx)
 
 		if userID != "" {
 			t.Errorf("expected empty string, got %q", userID)

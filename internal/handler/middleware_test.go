@@ -1,12 +1,12 @@
-package api_test
+package handler_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/serroba/online-docs/internal/api"
 	"github.com/serroba/online-docs/internal/collab"
+	"github.com/serroba/online-docs/internal/handler"
 	"github.com/serroba/online-docs/internal/storage"
 	"github.com/serroba/online-docs/internal/ws"
 )
@@ -21,7 +21,7 @@ func TestAuthMiddleware(t *testing.T) {
 		Hub:   hub,
 	})
 
-	server := api.NewServer(api.ServerConfig{
+	server := handler.NewServer(handler.ServerConfig{
 		Manager: manager,
 		Store:   store,
 		Hub:     hub,

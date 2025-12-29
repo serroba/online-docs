@@ -1,4 +1,4 @@
-package api_test
+package handler_test
 
 import (
 	"bytes"
@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/serroba/online-docs/internal/acl"
-	"github.com/serroba/online-docs/internal/api"
 	"github.com/serroba/online-docs/internal/collab"
+	"github.com/serroba/online-docs/internal/handler"
 	"github.com/serroba/online-docs/internal/storage"
 	"github.com/serroba/online-docs/internal/ws"
 	"github.com/stretchr/testify/require"
@@ -30,7 +30,7 @@ func TestHandleCreateDocument(t *testing.T) {
 			Hub:       hub,
 		})
 
-		server := api.NewServer(api.ServerConfig{
+		server := handler.NewServer(handler.ServerConfig{
 			Manager:   manager,
 			Store:     store,
 			PermStore: permStore,
@@ -82,7 +82,7 @@ func TestHandleCreateDocument(t *testing.T) {
 			Hub:   hub,
 		})
 
-		server := api.NewServer(api.ServerConfig{
+		server := handler.NewServer(handler.ServerConfig{
 			Manager: manager,
 			Store:   store,
 			Hub:     hub,
@@ -110,7 +110,7 @@ func TestHandleCreateDocument(t *testing.T) {
 			Hub:   hub,
 		})
 
-		server := api.NewServer(api.ServerConfig{
+		server := handler.NewServer(handler.ServerConfig{
 			Manager: manager,
 			Store:   store,
 			Hub:     hub,
@@ -144,7 +144,7 @@ func TestHandleGetDocument(t *testing.T) {
 			Hub:   hub,
 		})
 
-		server := api.NewServer(api.ServerConfig{
+		server := handler.NewServer(handler.ServerConfig{
 			Manager: manager,
 			Store:   store,
 			Hub:     hub,
@@ -178,7 +178,7 @@ func TestHandleGetDocument(t *testing.T) {
 			Hub:   hub,
 		})
 
-		server := api.NewServer(api.ServerConfig{
+		server := handler.NewServer(handler.ServerConfig{
 			Manager: manager,
 			Store:   store,
 			Hub:     hub,
@@ -209,7 +209,7 @@ func TestHandleGetDocument(t *testing.T) {
 			Hub:       hub,
 		})
 
-		server := api.NewServer(api.ServerConfig{
+		server := handler.NewServer(handler.ServerConfig{
 			Manager:   manager,
 			Store:     store,
 			PermStore: permStore,
@@ -243,7 +243,7 @@ func TestHandleDeleteDocument(t *testing.T) {
 			Hub:   hub,
 		})
 
-		server := api.NewServer(api.ServerConfig{
+		server := handler.NewServer(handler.ServerConfig{
 			Manager: manager,
 			Store:   store,
 			Hub:     hub,
@@ -276,7 +276,7 @@ func TestHandleDeleteDocument(t *testing.T) {
 			Hub:   hub,
 		})
 
-		server := api.NewServer(api.ServerConfig{
+		server := handler.NewServer(handler.ServerConfig{
 			Manager: manager,
 			Store:   store,
 			Hub:     hub,
@@ -309,7 +309,7 @@ func TestHandleDeleteDocument(t *testing.T) {
 			Hub:       hub,
 		})
 
-		server := api.NewServer(api.ServerConfig{
+		server := handler.NewServer(handler.ServerConfig{
 			Manager:   manager,
 			Store:     store,
 			PermStore: permStore,

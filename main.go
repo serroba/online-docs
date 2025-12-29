@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/serroba/online-docs/internal/acl"
-	"github.com/serroba/online-docs/internal/api"
 	"github.com/serroba/online-docs/internal/collab"
+	"github.com/serroba/online-docs/internal/handler"
 	"github.com/serroba/online-docs/internal/storage"
 	"github.com/serroba/online-docs/internal/ws"
 )
@@ -28,7 +28,7 @@ func main() {
 	})
 
 	// Initialize API server
-	server := api.NewServer(api.ServerConfig{
+	server := handler.NewServer(handler.ServerConfig{
 		Manager:   manager,
 		Store:     store,
 		PermStore: permStore,
