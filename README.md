@@ -155,11 +155,11 @@ go-test-coverage --config=.testcoverage.yml
 
 The creator of a document is automatically granted the **Owner** role. Roles and permissions:
 
-| Role | Read | Write | Delete |
-|------|------|-------|--------|
-| Owner | Yes | Yes | Yes |
-| Editor | Yes | Yes | No |
-| Viewer | Yes | No | No |
+| Role   | Read | Write | Delete |
+|--------|------|-------|--------|
+| Owner  | Yes  | Yes   | Yes    |
+| Editor | Yes  | Yes   | No     |
+| Viewer | Yes  | No    | No     |
 
 Users without any role cannot access the document (when ACL is enabled).
 
