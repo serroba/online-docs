@@ -18,6 +18,32 @@ func TestQueue_NewQueue(t *testing.T) {
 	}
 }
 
+func TestQueue_SetRevision(t *testing.T) {
+	t.Parallel()
+
+	q := ot.NewQueue(10)
+
+	if q.Revision() != 0 {
+		t.Errorf("expected initial revision 0, got %d", q.Revision())
+	}
+
+	q.SetRevision(42)
+
+	if q.Revision() != 42 {
+		t.Errorf("expected revision 42 after SetRevision, got %d", q.Revision())
+	}
+}
+
+func TestQueue_HistorySize(t *testing.T) {
+	t.Parallel()
+
+	q := ot.NewQueue(50)
+
+	if q.HistorySize() != 50 {
+		t.Errorf("expected history size 50, got %d", q.HistorySize())
+	}
+}
+
 func TestQueue_Apply_SingleOperation(t *testing.T) {
 	t.Parallel()
 

@@ -8,6 +8,7 @@ import (
 	"github.com/serroba/online-docs/internal/collab"
 	"github.com/serroba/online-docs/internal/ot"
 	"github.com/serroba/online-docs/internal/storage"
+	"github.com/serroba/online-docs/internal/ws"
 	"github.com/stretchr/testify/require"
 )
 
@@ -225,5 +226,158 @@ func TestSession_Revision(t *testing.T) {
 
 	if session.Revision() != 1 {
 		t.Errorf("expected revision 1, got %d", session.Revision())
+	}
+}
+
+func TestSession_Load_WhenClosed(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	session := collab.NewSession(collab.SessionConfig{
+		DocID: "doc1",
+		Store: store,
+	})
+
+	require.NoError(t, session.Load())
+	require.NoError(t, session.Close())
+
+	// Load after close should fail
+	err := session.Load()
+	if !errors.Is(err, collab.ErrSessionClosed) {
+		t.Errorf("expected ErrSessionClosed, got %v", err)
+	}
+}
+
+func TestSession_Close_Idempotent(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	session := collab.NewSession(collab.SessionConfig{
+		DocID: "doc1",
+		Store: store,
+	})
+
+	require.NoError(t, session.Load())
+
+	// Close multiple times should not error
+	require.NoError(t, session.Close())
+	require.NoError(t, session.Close())
+}
+
+func TestSession_WithSnapshotPolicy(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	policy := storage.NewSnapshotPolicy(3) // Snapshot every 3 ops
+
+	session := collab.NewSession(collab.SessionConfig{
+		DocID:          "doc1",
+		Store:          store,
+		SnapshotPolicy: policy,
+	})
+
+	require.NoError(t, session.Load())
+
+	// Apply 3 operations to trigger snapshot
+	for i := range 3 {
+		_, err := session.ApplyOperation("c1", "u1", ot.NewInsert("x", i, "u1"), i)
+		require.NoError(t, err)
+	}
+
+	// Verify snapshot was created
+	snapshot, err := store.LoadSnapshot("doc1")
+	require.NoError(t, err)
+
+	if snapshot.Revision != 3 {
+		t.Errorf("expected snapshot at revision 3, got %d", snapshot.Revision)
+	}
+}
+
+func TestSession_WithHub(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	hub := ws.NewHub()
+
+	session := collab.NewSession(collab.SessionConfig{
+		DocID: "doc1",
+		Store: store,
+		Hub:   hub,
+	})
+
+	require.NoError(t, session.Load())
+
+	// Apply operation - should not panic even with hub
+	_, err := session.ApplyOperation("c1", "u1", ot.NewInsert("A", 0, "u1"), 0)
+	require.NoError(t, err)
+}
+
+func TestSession_ApplyOperation_OTError(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	session := collab.NewSession(collab.SessionConfig{
+		DocID:       "doc1",
+		Store:       store,
+		HistorySize: 2, // Small history
+	})
+
+	require.NoError(t, session.Load())
+
+	// Apply several operations
+	for i := range 5 {
+		_, err := session.ApplyOperation("c1", "u1", ot.NewInsert("x", i, "u1"), i)
+		require.NoError(t, err)
+	}
+
+	// Try to apply with a revision that's too old
+	_, err := session.ApplyOperation("c1", "u1", ot.NewInsert("y", 0, "u1"), 0)
+	if err == nil {
+		t.Error("expected error for revision too old")
+	}
+}
+
+func TestSession_Load_WithOperations(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	// Pre-store some operations that will be loaded
+	require.NoError(t, store.AppendOperation("doc1", ot.SequencedOperation{
+		Operation: ot.Operation{Type: ot.Insert, Position: 0, Char: "H"},
+		Revision:  1,
+	}))
+	require.NoError(t, store.AppendOperation("doc1", ot.SequencedOperation{
+		Operation: ot.Operation{Type: ot.Insert, Position: 1, Char: "I"},
+		Revision:  2,
+	}))
+
+	session := collab.NewSession(collab.SessionConfig{
+		DocID: "doc1",
+		Store: store,
+	})
+
+	require.NoError(t, session.Load())
+
+	content, revision, err := session.GetState("user")
+	require.NoError(t, err)
+
+	if content != "HI" {
+		t.Errorf("expected content 'HI', got %q", content)
+	}
+
+	if revision != 2 {
+		t.Errorf("expected revision 2, got %d", revision)
 	}
 }
