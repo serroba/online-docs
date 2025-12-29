@@ -340,7 +340,9 @@ func TestDocument_ConcurrentAccess(t *testing.T) {
 
 			for range 100 {
 				op := ot.NewInsert("x", 0, "user")
-				_ = doc.Apply(op)
+				if err := doc.Apply(op); err != nil {
+					t.Errorf("unexpected error applying op: %v", err)
+				}
 			}
 		}()
 	}
