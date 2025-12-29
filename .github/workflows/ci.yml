@@ -39,3 +39,6 @@ jobs:
 
       - name: Run tests
         run: go test -v -race ./...
+
+      - name: Check Coverage Threshold (95%)
+        run: go-test-coverage --config=.testcoverage.yml
