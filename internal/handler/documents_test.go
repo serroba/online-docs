@@ -127,6 +127,60 @@ func TestHandleCreateDocument(t *testing.T) {
 			t.Errorf("expected status 400, got %d", rec.Code)
 		}
 	})
+
+	t.Run("returns 405 for wrong method", func(t *testing.T) {
+		t.Parallel()
+
+		store := storage.NewMemoryStore()
+		hub := ws.NewHub()
+		manager := collab.NewManager(collab.ManagerConfig{
+			Store: store,
+			Hub:   hub,
+		})
+
+		server := handler.NewServer(handler.ServerConfig{
+			Manager: manager,
+			Store:   store,
+			Hub:     hub,
+		})
+
+		req := httptest.NewRequest(http.MethodGet, "/documents", nil)
+		req.Header.Set("X-User-Id", "user1")
+
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected status 405, got %d", rec.Code)
+		}
+	})
+
+	t.Run("returns 400 for invalid JSON body", func(t *testing.T) {
+		t.Parallel()
+
+		store := storage.NewMemoryStore()
+		hub := ws.NewHub()
+		manager := collab.NewManager(collab.ManagerConfig{
+			Store: store,
+			Hub:   hub,
+		})
+
+		server := handler.NewServer(handler.ServerConfig{
+			Manager: manager,
+			Store:   store,
+			Hub:     hub,
+		})
+
+		req := httptest.NewRequest(http.MethodPost, "/documents", bytes.NewReader([]byte("invalid json")))
+		req.Header.Set("X-User-Id", "user1")
+
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("expected status 400, got %d", rec.Code)
+		}
+	})
 }
 
 func TestHandleGetDocument(t *testing.T) {
@@ -224,6 +278,33 @@ func TestHandleGetDocument(t *testing.T) {
 
 		if rec.Code != http.StatusForbidden {
 			t.Errorf("expected status 403, got %d", rec.Code)
+		}
+	})
+
+	t.Run("returns 400 for empty document ID", func(t *testing.T) {
+		t.Parallel()
+
+		store := storage.NewMemoryStore()
+		hub := ws.NewHub()
+		manager := collab.NewManager(collab.ManagerConfig{
+			Store: store,
+			Hub:   hub,
+		})
+
+		server := handler.NewServer(handler.ServerConfig{
+			Manager: manager,
+			Store:   store,
+			Hub:     hub,
+		})
+
+		req := httptest.NewRequest(http.MethodGet, "/documents/", nil)
+		req.Header.Set("X-User-Id", "user1")
+
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("expected status 400, got %d", rec.Code)
 		}
 	})
 }
@@ -324,6 +405,33 @@ func TestHandleDeleteDocument(t *testing.T) {
 
 		if rec.Code != http.StatusForbidden {
 			t.Errorf("expected status 403, got %d", rec.Code)
+		}
+	})
+
+	t.Run("returns 400 for empty document ID", func(t *testing.T) {
+		t.Parallel()
+
+		store := storage.NewMemoryStore()
+		hub := ws.NewHub()
+		manager := collab.NewManager(collab.ManagerConfig{
+			Store: store,
+			Hub:   hub,
+		})
+
+		server := handler.NewServer(handler.ServerConfig{
+			Manager: manager,
+			Store:   store,
+			Hub:     hub,
+		})
+
+		req := httptest.NewRequest(http.MethodDelete, "/documents/", nil)
+		req.Header.Set("X-User-Id", "user1")
+
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("expected status 400, got %d", rec.Code)
 		}
 	})
 }

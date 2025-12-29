@@ -79,12 +79,6 @@ func (s *Server) handleCreateDocument(w http.ResponseWriter, r *http.Request) {
 
 // handleGetDocument handles GET /documents/{id}.
 func (s *Server) handleGetDocument(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-
-		return
-	}
-
 	docID := extractDocID(r.URL.Path, "/documents/")
 	if docID == "" {
 		http.Error(w, "document ID is required", http.StatusBadRequest)
@@ -134,12 +128,6 @@ func (s *Server) handleGetDocument(w http.ResponseWriter, r *http.Request) {
 
 // handleDeleteDocument handles DELETE /documents/{id}.
 func (s *Server) handleDeleteDocument(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-
-		return
-	}
-
 	docID := extractDocID(r.URL.Path, "/documents/")
 	if docID == "" {
 		http.Error(w, "document ID is required", http.StatusBadRequest)
