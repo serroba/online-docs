@@ -42,6 +42,19 @@ func (q *Queue) Revision() int {
 	return q.revision
 }
 
+// SetRevision sets the current revision (used when loading from storage).
+func (q *Queue) SetRevision(rev int) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	q.revision = rev
+}
+
+// HistorySize returns the maximum history size.
+func (q *Queue) HistorySize() int {
+	return q.historySize
+}
+
 // Apply takes an operation and its base revision, transforms it against
 // any operations that have occurred since that revision, and returns
 // the transformed operation with its new sequence number.

@@ -182,3 +182,50 @@ func TestChecker_RequirePermission_NoPermission(t *testing.T) {
 		t.Errorf("expected ErrAccessDenied, got %v", err)
 	}
 }
+
+// errorStore is a mock store that returns errors for testing.
+type errorStore struct {
+	err error
+}
+
+func (e *errorStore) Grant(_, _ string, _ acl.Role) error {
+	return e.err
+}
+
+func (e *errorStore) Revoke(_, _ string) error {
+	return e.err
+}
+
+func (e *errorStore) GetRole(_, _ string) (acl.Role, error) {
+	return 0, e.err
+}
+
+func (e *errorStore) ListPermissions(_ string) ([]acl.Permission, error) {
+	return nil, e.err
+}
+
+func TestChecker_CanPerform_StoreError(t *testing.T) {
+	t.Parallel()
+
+	storeErr := errors.New("store error")
+	store := &errorStore{err: storeErr}
+	checker := acl.NewChecker(store)
+
+	_, err := checker.CanPerform("doc1", "user1", acl.ActionRead)
+	if !errors.Is(err, storeErr) {
+		t.Errorf("expected store error, got %v", err)
+	}
+}
+
+func TestChecker_RequirePermission_StoreError(t *testing.T) {
+	t.Parallel()
+
+	storeErr := errors.New("store error")
+	store := &errorStore{err: storeErr}
+	checker := acl.NewChecker(store)
+
+	err := checker.RequirePermission("doc1", "user1", acl.ActionRead)
+	if !errors.Is(err, storeErr) {
+		t.Errorf("expected store error, got %v", err)
+	}
+}

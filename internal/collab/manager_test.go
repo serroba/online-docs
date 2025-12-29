@@ -1,0 +1,306 @@
+package collab_test
+
+import (
+	"sync"
+	"testing"
+
+	"github.com/serroba/online-docs/internal/acl"
+	"github.com/serroba/online-docs/internal/collab"
+	"github.com/serroba/online-docs/internal/ot"
+	"github.com/serroba/online-docs/internal/storage"
+	"github.com/stretchr/testify/require"
+)
+
+func TestManager_GetOrCreateSession(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	manager := collab.NewManager(collab.ManagerConfig{
+		Store: store,
+	})
+
+	session, err := manager.GetOrCreateSession("doc1")
+	require.NoError(t, err)
+
+	if session == nil {
+		t.Fatal("expected session, got nil")
+	}
+
+	if session.DocID() != "doc1" {
+		t.Errorf("expected docID doc1, got %s", session.DocID())
+	}
+
+	// Getting again should return the same session
+	session2, err := manager.GetOrCreateSession("doc1")
+	require.NoError(t, err)
+
+	if session != session2 {
+		t.Error("expected same session instance")
+	}
+}
+
+func TestManager_GetSession(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	manager := collab.NewManager(collab.ManagerConfig{
+		Store: store,
+	})
+
+	// Before creating - should return nil
+	session := manager.GetSession("doc1")
+	if session != nil {
+		t.Error("expected nil before creating")
+	}
+
+	// Create session
+	_, err := manager.GetOrCreateSession("doc1")
+	require.NoError(t, err)
+
+	// After creating - should return session
+	session = manager.GetSession("doc1")
+	if session == nil {
+		t.Error("expected session after creating")
+	}
+}
+
+func TestManager_CloseSession(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	manager := collab.NewManager(collab.ManagerConfig{
+		Store: store,
+	})
+
+	_, err := manager.GetOrCreateSession("doc1")
+	require.NoError(t, err)
+
+	if manager.SessionCount() != 1 {
+		t.Errorf("expected 1 session, got %d", manager.SessionCount())
+	}
+
+	require.NoError(t, manager.CloseSession("doc1"))
+
+	if manager.SessionCount() != 0 {
+		t.Errorf("expected 0 sessions after close, got %d", manager.SessionCount())
+	}
+
+	// Closing non-existent should not error
+	require.NoError(t, manager.CloseSession("doc1"))
+}
+
+func TestManager_CloseAll(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+	require.NoError(t, store.CreateDocument("doc2"))
+	require.NoError(t, store.CreateDocument("doc3"))
+
+	manager := collab.NewManager(collab.ManagerConfig{
+		Store: store,
+	})
+
+	_, err := manager.GetOrCreateSession("doc1")
+	require.NoError(t, err)
+
+	_, err = manager.GetOrCreateSession("doc2")
+	require.NoError(t, err)
+
+	_, err = manager.GetOrCreateSession("doc3")
+	require.NoError(t, err)
+
+	if manager.SessionCount() != 3 {
+		t.Errorf("expected 3 sessions, got %d", manager.SessionCount())
+	}
+
+	require.NoError(t, manager.CloseAll())
+
+	if manager.SessionCount() != 0 {
+		t.Errorf("expected 0 sessions after CloseAll, got %d", manager.SessionCount())
+	}
+}
+
+func TestManager_ConcurrentAccess(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+
+	for i := range 10 {
+		docID := string(rune('a' + i))
+		require.NoError(t, store.CreateDocument(docID))
+	}
+
+	manager := collab.NewManager(collab.ManagerConfig{
+		Store: store,
+	})
+
+	var wg sync.WaitGroup
+
+	// Concurrently create sessions
+	for i := range 10 {
+		wg.Add(1)
+
+		go func(n int) {
+			defer wg.Done()
+
+			docID := string(rune('a' + n))
+
+			_, err := manager.GetOrCreateSession(docID)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	if manager.SessionCount() != 10 {
+		t.Errorf("expected 10 sessions, got %d", manager.SessionCount())
+	}
+}
+
+func TestManager_SessionCount(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+	require.NoError(t, store.CreateDocument("doc2"))
+
+	manager := collab.NewManager(collab.ManagerConfig{
+		Store: store,
+	})
+
+	if manager.SessionCount() != 0 {
+		t.Errorf("expected 0 sessions initially, got %d", manager.SessionCount())
+	}
+
+	_, err := manager.GetOrCreateSession("doc1")
+	require.NoError(t, err)
+
+	if manager.SessionCount() != 1 {
+		t.Errorf("expected 1 session, got %d", manager.SessionCount())
+	}
+
+	_, err = manager.GetOrCreateSession("doc2")
+	require.NoError(t, err)
+
+	if manager.SessionCount() != 2 {
+		t.Errorf("expected 2 sessions, got %d", manager.SessionCount())
+	}
+}
+
+func TestManager_WithPermStore(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	permStore := acl.NewMemoryStore()
+	require.NoError(t, permStore.Grant("doc1", "editor", acl.Editor))
+
+	manager := collab.NewManager(collab.ManagerConfig{
+		Store:     store,
+		PermStore: permStore,
+	})
+
+	session, err := manager.GetOrCreateSession("doc1")
+	require.NoError(t, err)
+
+	// Editor should be able to write
+	_, err = session.ApplyOperation("c1", "editor", ot.NewInsert("A", 0, "editor"), 0)
+	require.NoError(t, err)
+
+	// Unknown user should fail
+	_, err = session.ApplyOperation("c2", "unknown", ot.NewInsert("B", 1, "unknown"), 1)
+	if err == nil {
+		t.Error("expected error for unknown user")
+	}
+}
+
+func TestManager_GetOrCreateSession_LoadError(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	// Note: NOT creating the document - this will cause Load to fail
+
+	manager := collab.NewManager(collab.ManagerConfig{
+		Store: store,
+	})
+
+	_, err := manager.GetOrCreateSession("nonexistent")
+	if err == nil {
+		t.Error("expected error when document doesn't exist")
+	}
+}
+
+func TestManager_GetOrCreateSession_RaceCondition(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	manager := collab.NewManager(collab.ManagerConfig{
+		Store: store,
+	})
+
+	// Many goroutines try to get the same session simultaneously
+	var wg sync.WaitGroup
+
+	sessions := make([]*collab.Session, 20)
+
+	for i := range 20 {
+		wg.Add(1)
+
+		go func(idx int) {
+			defer wg.Done()
+
+			session, err := manager.GetOrCreateSession("doc1")
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+
+				return
+			}
+
+			sessions[idx] = session
+		}(i)
+	}
+
+	wg.Wait()
+
+	// All should get the same session instance
+	for i := 1; i < len(sessions); i++ {
+		if sessions[i] != sessions[0] {
+			t.Error("expected all goroutines to get the same session")
+
+			break
+		}
+	}
+
+	if manager.SessionCount() != 1 {
+		t.Errorf("expected 1 session, got %d", manager.SessionCount())
+	}
+}
+
+func TestManager_CustomHistorySize(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	manager := collab.NewManager(collab.ManagerConfig{
+		Store:       store,
+		HistorySize: 50,
+	})
+
+	_, err := manager.GetOrCreateSession("doc1")
+	require.NoError(t, err)
+
+	// Just verifying no panic with custom history size
+}
