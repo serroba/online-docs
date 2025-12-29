@@ -165,5 +165,19 @@ func (m *MemoryStore) LatestRevision(docID string) (int, error) {
 	return 0, nil
 }
 
+// DeleteDocument removes a document and all its data.
+func (m *MemoryStore) DeleteDocument(docID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.docs[docID]; !exists {
+		return ErrDocumentNotFound
+	}
+
+	delete(m.docs, docID)
+
+	return nil
+}
+
 // Ensure MemoryStore implements Store.
 var _ Store = (*MemoryStore)(nil)

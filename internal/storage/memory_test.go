@@ -391,3 +391,109 @@ func TestMemoryStore_SnapshotOverwrite(t *testing.T) {
 		t.Errorf("expected content 'second', got %s", snapshot.Content)
 	}
 }
+
+func TestMemoryStore_DeleteDocument(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	// Verify document exists
+	exists, err := store.DocumentExists("doc1")
+	require.NoError(t, err)
+
+	if !exists {
+		t.Fatal("expected document to exist before deletion")
+	}
+
+	// Delete the document
+	err = store.DeleteDocument("doc1")
+	require.NoError(t, err)
+
+	// Verify document no longer exists
+	exists, err = store.DocumentExists("doc1")
+	require.NoError(t, err)
+
+	if exists {
+		t.Error("expected document to not exist after deletion")
+	}
+}
+
+func TestMemoryStore_DeleteDocument_NotFound(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+
+	err := store.DeleteDocument("nonexistent")
+
+	if !errors.Is(err, storage.ErrDocumentNotFound) {
+		t.Errorf("expected ErrDocumentNotFound, got %v", err)
+	}
+}
+
+func TestMemoryStore_DeleteDocument_WithData(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+	require.NoError(t, store.CreateDocument("doc1"))
+
+	// Add some data
+	require.NoError(t, store.SaveSnapshot("doc1", 5, "hello"))
+	require.NoError(t, store.AppendOperation("doc1", ot.SequencedOperation{
+		Operation: ot.Operation{Type: ot.Insert, Position: 5, Char: "!"},
+		Revision:  6,
+	}))
+
+	// Delete should remove all data
+	require.NoError(t, store.DeleteDocument("doc1"))
+
+	// Verify document is gone
+	exists, _ := store.DocumentExists("doc1")
+	if exists {
+		t.Error("expected document to be deleted")
+	}
+
+	// Verify operations are gone
+	_, err := store.LoadOperations("doc1", 0)
+	if !errors.Is(err, storage.ErrDocumentNotFound) {
+		t.Errorf("expected ErrDocumentNotFound for operations, got %v", err)
+	}
+}
+
+func TestMemoryStore_DeleteDocument_Concurrent(t *testing.T) {
+	t.Parallel()
+
+	store := storage.NewMemoryStore()
+
+	// Create multiple documents
+	for i := range 10 {
+		docID := string(rune('a' + i))
+		require.NoError(t, store.CreateDocument(docID))
+	}
+
+	var wg sync.WaitGroup
+
+	// Delete concurrently
+	for i := range 10 {
+		wg.Add(1)
+
+		go func(n int) {
+			defer wg.Done()
+
+			docID := string(rune('a' + n))
+			_ = store.DeleteDocument(docID)
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Verify all documents are deleted
+	for i := range 10 {
+		docID := string(rune('a' + i))
+
+		exists, _ := store.DocumentExists(docID)
+		if exists {
+			t.Errorf("expected document %s to be deleted", docID)
+		}
+	}
+}
