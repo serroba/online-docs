@@ -6,6 +6,8 @@ import (
 	"github.com/serroba/online-docs/internal/ot"
 )
 
+const testDocHello = "HELLO"
+
 func TestTransform_InsertVsInsert_DifferentPositions(t *testing.T) {
 	t.Parallel()
 
@@ -185,7 +187,7 @@ func TestTransform_HelloExample(t *testing.T) {
 	}
 
 	// Verify convergence by simulating both orderings
-	doc := "HELLO"
+	doc := testDocHello
 
 	// Path 1: Apply alice first, then transformed bob
 	path1 := applyInsert(doc, alicePrime.Position, alicePrime.Char)
