@@ -70,10 +70,39 @@ func TestQueue_Apply_SequentialOperations(t *testing.T) {
 	if result2.Revision != 2 {
 		t.Errorf("expected revision 2, got %d", result2.Revision)
 	}
+}
 
-	// Position should remain 1 (no transformation needed)
-	if result2.Position != 1 {
-		t.Errorf("expected position 1, got %d", result2.Position)
+func TestQueue_Apply_BaseRevisionEqualsCurrentRevision(t *testing.T) {
+	t.Parallel()
+
+	q := ot.NewQueue(100)
+
+	// Apply some operations first to get to a non-zero revision
+	for i := range 3 {
+		op := ot.NewInsert("x", i, "setup")
+		_, _ = q.Apply(op, i)
+	}
+
+	// Now revision is 3
+	if q.Revision() != 3 {
+		t.Fatalf("expected revision 3, got %d", q.Revision())
+	}
+
+	// Apply an operation based on current revision (no transform needed)
+	op := ot.NewInsert("y", 5, "alice")
+
+	result, err := q.Apply(op, 3) // baseRevision == current revision
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Operation should be applied without transformation
+	if result.Position != 5 {
+		t.Errorf("expected position 5 (unchanged), got %d", result.Position)
+	}
+
+	if result.Revision != 4 {
+		t.Errorf("expected revision 4, got %d", result.Revision)
 	}
 }
 
